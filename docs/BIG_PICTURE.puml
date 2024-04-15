@@ -1,0 +1,7 @@
+@startuml Big Picture
+    !include https://raw.githubusercontent.com/tmorin/plantuml-libs/master/distribution/eventstorming/single.puml
+
+    Person('customer', "Customer")
+    Command('item', "Add Item To Cart")
+    System('cart', "Cart")
+@enduml
