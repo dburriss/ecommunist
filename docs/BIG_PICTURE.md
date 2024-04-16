@@ -75,6 +75,21 @@ flowchart LR
         p_ev2 --> p_ev3
     end
 
+    subgraph "Accounting"
+        Bookkeeper:::actor
+        a[Accounting]:::system
+        Bank:::system
+        PaymentMatcher:::system
+        a_ev1[Unpaid Invoice Created]:::event
+        a_ev2[Payment Received]:::event
+        a_ev3[Invoice Paid]:::event
+        a_ev4[Paid Invoice Received]:::event
+        a_ev5[Invoice Closed]:::event
+        a_ev1 --> a_ev2 --> a_ev3 --> a_ev4 --> a_ev5
+        PaymentMatcher --> a_ev3
+        Bookkeeper --> a_ev3
+    end
+
     subgraph "Checkout"
         c_ev1[Checkout Started]:::event
         c_ev2[Checkout Completed]:::event
@@ -83,6 +98,7 @@ flowchart LR
         c_ev1 --> p_ev1
         p_ev3 --> c_ev2
         c_ev1 --> o_ev1
+        c_ev2 --> a_ev4
     end
 
     subgraph "Catalogue"
@@ -102,7 +118,7 @@ flowchart LR
 
     subgraph "Shopping"
         Customer:::actor
-        ps[Product Search]:::system
+        ps[Product Lookup]:::system
         Cart:::system
         s_ev1[Item Added to cart]:::event
         s_ev2[Proceeded to checkout]:::event
@@ -128,21 +144,6 @@ flowchart LR
         w_ev13 --> s_ev7
         w_ev14 --> s_ev7
         ct_ev3 --> s_ev6
-    end
-
-    subgraph "Accounting"
-        Bookkeeper:::actor
-        a[Accounting]:::system
-        Bank:::system
-        PaymentMatcher:::system
-        a_ev1[Unpaid Invoice Created]:::event
-        a_ev2[Payment Received]:::event
-        a_ev3[Invoice Paid]:::event
-        a_ev4[Paid Invoice Recieved]:::event
-        a_ev5[Invoice Closed]:::event
-        a_ev1 --> a_ev2 --> a_ev3 --> a_ev4 --> a_ev5
-        PaymentMatcher --> a_ev3
-        Bookkeeper --> a_ev3
     end
 
     subgraph "Stores"
