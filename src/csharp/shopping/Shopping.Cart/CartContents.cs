@@ -5,6 +5,7 @@ namespace Shopping.Cart;
 public record CartContents(Guid Id, uint Version, ImmutableDictionary<string, Tuple<string, uint>> Items)
 {
     public static CartContents New => new CartContents(Guid.NewGuid(), 0, ImmutableDictionary<string, Tuple<string, uint>>.Empty);
+    public static CartContents NewWith(CartId cartId) => new(cartId.Value, 0, ImmutableDictionary<string, Tuple<string, uint>>.Empty);
     public static CartContents AddItem(CartContents contents, ulong previousVersion, ProductRef productRef, uint quantity)
     {
         // version check

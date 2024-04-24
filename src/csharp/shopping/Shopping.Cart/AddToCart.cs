@@ -17,27 +17,56 @@ public class AddToCart
         uint quantity,
         ulong currentCartVersion = 0)
     {
-        // Check availability in product catalog cache
-        var productRef = _productLookup.LookupProduct(sku);
-        if (productRef == null) return Result<CartContents>.Fail(new NullReferenceException("Product not found"));
-        // Check if enough stock 
-        if (productRef.AvailableStock < quantity)
-            return Result<CartContents>.Fail(new InvalidOperationException("Not enough stock"));
-        // Get cart contents
         try
         {
-            var cart = await _carts.Upsert(
-                CartContents.AddItem(CartContents.New, currentCartVersion, productRef, quantity),
-                (_, existingContents) =>
-                {
-                    return CartContents.AddItem(existingContents, currentCartVersion, productRef, quantity);
-                }
-            );
+            var productRef = _productLookup.LookupProduct(sku);
+            if (IsProductNotFoundInLookup(productRef)) 
+                return ProductNotFoundResult();
+            
+            if (IsNotEnoughStock(quantity, productRef))
+                return NotEnoughStockResult();
+            
+            var cart = await AddItemToCart(cartId, productRef!, quantity, currentCartVersion);
             return Result<CartContents>.Success(cart);
         }
         catch (Exception e)
         {
             return Result<CartContents>.Fail(e);
         }
+    }
+    
+    private async Task<CartContents> AddItemToCart(
+        CartId cartId,
+        ProductRef productRef,
+        uint quantity,
+        ulong currentCartVersion)
+    {
+        return await _carts.Upsert(
+            CartContents.AddItem(CartContents.NewWith(cartId), currentCartVersion, productRef, quantity),
+            (_, existingContents) =>
+            {
+                return CartContents.AddItem(existingContents, currentCartVersion, productRef, quantity);
+            }
+        );
+    }
+    
+    private static Result<CartContents> NotEnoughStockResult()
+    {
+        return Result<CartContents>.Fail(new InvalidOperationException("Not enough stock"));
+    }
+    
+    private static bool IsNotEnoughStock(uint quantity, ProductRef? productRef)
+    {
+        return productRef.AvailableStock < quantity;
+    }
+    
+    private static Result<CartContents> ProductNotFoundResult()
+    {
+        return Result<CartContents>.Fail(new NullReferenceException("Product not found"));
+    }
+    
+    private static bool IsProductNotFoundInLookup(ProductRef? productRef)
+    {
+        return productRef == null;
     }
 }
