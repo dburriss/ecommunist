@@ -2,8 +2,8 @@
 
 public class AddToCart
 {
-    private readonly ProductLookup _productLookup;
     private readonly Carts _carts;
+    private readonly ProductLookup _productLookup;
     
     public AddToCart(ProductLookup productLookup, Carts carts)
     {
@@ -11,49 +11,33 @@ public class AddToCart
         _carts = carts;
     }
     
-    public AddToCartResult Execute(CartId cartId, ProductId productId, int quantity)
+    public async Task<Result<CartContents>> Execute(
+        CartId cartId,
+        Sku sku,
+        uint quantity,
+        ulong currentCartVersion = 0)
     {
-        // Check if known cart, else create new cart
-        var cart = _carts.Get(cartId); 
         // Check availability in product catalog cache
-        var productRef = _productLookup.LookupProduct(productId);
-        // If available, add to cart
-        // If not available, return error
-        return new AddToCartResult(cartId, productRef!, quantity,true,string.Empty);
+        var productRef = _productLookup.LookupProduct(sku);
+        if (productRef == null) return Result<CartContents>.Fail(new NullReferenceException("Product not found"));
+        // Check if enough stock 
+        if (productRef.AvailableStock < quantity)
+            return Result<CartContents>.Fail(new InvalidOperationException("Not enough stock"));
+        // Get cart contents
+        try
+        {
+            var cart = await _carts.Upsert(
+                CartContents.AddItem(CartContents.New, currentCartVersion, productRef, quantity),
+                (_, existingContents) =>
+                {
+                    return CartContents.AddItem(existingContents, currentCartVersion, productRef, quantity);
+                }
+            );
+            return Result<CartContents>.Success(cart);
+        }
+        catch (Exception e)
+        {
+            return Result<CartContents>.Fail(e);
+        }
     }
-}
-
-public interface Carts
-{
-    Cart Get(CartId cartId);
-}
-
-public interface Cart
-{
-    CartId Id { get; }
-    IEnumerable<CartItem> Items { get; }
-    int ItemCount { get; }
-    int TotalCostCents { get; }
-    void Add(ProductRef productRef, int quantity);
-    void Remove(ProductRef productRef, int quantity);
-    void Clear();
-}
-
-public record CartItem(ProductRef ProductRef, int Quantity);
-
-public record AddToCartResult(
-    CartId CartId,
-    ProductRef ProductRef,
-    int Quantity,
-    bool Success,
-    string ErrorMessage);
-
-public record CartId(Guid Value, uint Version);
-
-public record ProductId(Guid Value);
-public record ProductRef(ProductId ProductId, string Title, uint AvailableStock);
-
-public interface ProductLookup
-{
-    ProductRef? LookupProduct(ProductId productId);
 }
